@@ -1,0 +1,70 @@
+import networkx as nx
+import numpy as np
+import math
+import matplotlib.pyplot as plt
+G = nx.Graph()
+
+# Add edges with success probability
+edges = [
+    ('S', 'A', 0.9),
+    ('A', 'B', 0.8),
+    ('B', 'D', 0.7),
+    ('S', 'D', 0.4),
+    ('A', 'D', 0.6)
+]
+
+for u, v, p in edges:
+    G.add_edge(u, v, prob=p)
+for u, v in G.edges():
+    p = G[u][v]['prob']
+    G[u][v]['weight'] = -math.log(p)
+
+source = 'S'
+destination = 'D'
+
+shortest_dist = nx.dijkstra_path_length(G, source, destination, weight='weight')
+best_path = nx.dijkstra_path(G, source, destination, weight='weight')
+
+max_probability = math.exp(-shortest_dist)
+
+print("Best Path:", best_path)
+print("Maximum Success Probability:", max_probability)
+
+pos = nx.spring_layout(G)
+
+edge_labels = {(u, v): f"{G[u][v]['prob']}" for u, v in G.edges()}
+
+nx.draw(G, pos, with_labels=True, node_color='lightblue', node_size=2000)
+nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels)
+
+plt.title("Probabilistic Network Graph")
+plt.show()
+def simulate_failures(G, failure_prob=0.3):
+    G_copy = G.copy()
+    for u, v in list(G_copy.edges()):
+        if np.random.rand() < failure_prob:
+            G_copy.remove_edge(u, v)
+    return G_copy
+G_failed = simulate_failures(G)
+
+if nx.has_path(G_failed, source, destination):
+    dist = nx.dijkstra_path_length(G_failed, source, destination, weight='weight')
+    print("New Probability:", math.exp(-dist))
+else:
+    print("No path exists after failures")
+
+results = []
+
+for i in range(20):
+    G_temp = simulate_failures(G, 0.2)
+    if nx.has_path(G_temp, source, destination):
+        dist = nx.dijkstra_path_length(G_temp, source, destination, weight='weight')
+        results.append(math.exp(-dist))
+    else:
+        results.append(0)
+
+plt.plot(results, marker='o')
+plt.xlabel("Simulation Run")
+plt.ylabel("Success Probability")
+plt.title("Routing Reliability Under Failures")
+plt.show()
